@@ -1,278 +1,406 @@
-
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>QuickClick</title>
-    
     <style>
-        /* --- CSS: Base Reset --- */
+        /* --- CSS RESET & BASE --- */
         * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+            box-sizing: border-box; margin: 0; padding: 0;
+            user-select: none; -webkit-user-select: none; touch-action: none;
             font-family: sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
         }
 
-        /* If the user holds the phone vertically before the code forces it,
-           this ensures the background remains black and centered.
-        */
-        body {
-            background-color: #000000; 
-            color: #ffffff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
+        body, html {
+            width: 100%; height: 100%; overflow: hidden;
+            background-color: #000000; color: white;
+            transition: background-color 0.3s ease;
         }
 
-        #app-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            position: relative;
-        }
-
-        /* Screen Management */
+        /* --- SCREENS --- */
         .screen {
-            display: none; 
-            width: 100%;
-            height: 100%;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: absolute;
-            top: 0;
-            left: 0;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+            z-index: 1;
         }
+        .active-screen { opacity: 1; pointer-events: auto; }
 
-        .active-screen {
-            display: flex; 
+        /* --- MAIN MENU --- */
+        #main-menu h1 {
+            font-size: 8vmin; color: #ffffff; letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5); margin-bottom: 5vmin;
         }
-
-        /* --- Menu Screen Styles --- */
-        #menu-screen h1 {
-            font-size: 4rem;
-            margin-bottom: 30px;
-            color: #ff3333;
-            letter-spacing: 3px;
-            text-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
-        }
-
         .menu-btn {
-            background-color: #111;
-            color: white;
-            border: 2px solid #333;
-            padding: 15px 40px;
-            margin: 10px;
-            font-size: 1.5rem;
-            border-radius: 8px;
-            width: 300px;
-            cursor: pointer;
-            transition: background-color 0.1s;
+            background-color: #111; color: white; border: 2px solid #333;
+            padding: 2vmin 6vmin; margin: 1.5vmin; font-size: 3.5vmin;
+            border-radius: 8px; width: 50vmin; cursor: pointer; transition: 0.1s;
+        }
+        .menu-btn:active { background-color: #333; border-color: #ffffff; }
+        
+        .top-bar-btn {
+            position: absolute; top: 3vmin; font-size: 4vmin;
+            background: none; border: none; color: #888; cursor: pointer; z-index: 10;
+        }
+        #back-btn { left: 3vmin; }
+        #mute-btn { right: 3vmin; font-size: 5vmin; }
+
+        /* --- GAMEPLAY --- */
+        #game-container { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; }
+        
+        /* The perfectly round button with NO numbers inside */
+        #click-button {
+            width: 65vmin; height: 65vmin; aspect-ratio: 1 / 1; border-radius: 50%;
+            background: #ff0000; 
+            box-shadow: inset 0 15px 30px rgba(255,255,255,0.4), inset 0 -15px 30px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.7), 0 0 0 10px rgba(0,0,0,0.5);
+            border: none; cursor: pointer; position: relative; outline: none;
+            display: flex; justify-content: center; align-items: center;
+            transition: transform 0.05s linear; 
         }
 
-        .menu-btn:active {
-            background-color: #333;
-            border-color: #ff3333;
+        /* --- SETTINGS MODAL (THE MASSIVE CIRCLE) --- */
+        #settings-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 100;
+        }
+        .active-modal { opacity: 1 !important; pointer-events: auto !important; }
+
+        #settings-circle {
+            width: 95vmin; height: 95vmin; border-radius: 50%;
+            background: rgba(20, 20, 20, 0.95); border: 2px solid #444;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 3vmin; position: relative; overflow: hidden;
         }
 
-        .back-btn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: none;
-            border: none;
-            color: #888;
-            font-size: 1.2rem;
-            cursor: pointer;
-            z-index: 20;
+        .settings-title { font-size: 4.5vmin; font-weight: bold; color: #ffffff; margin-bottom: 2vmin; }
+        
+        /* Sliders & Inputs */
+        .setting-row { display: flex; align-items: center; width: 85%; justify-content: space-between; margin-bottom: 1.5vmin;}
+        .setting-label { font-size: 2.5vmin; width: 25%; color: #ccc;}
+        input[type="range"] { width: 50%; accent-color: #ffffff; }
+        .num-input { 
+            width: 15%; padding: 1vmin; background: #000; border: 1px solid #555; 
+            color: white; text-align: center; font-size: 2.2vmin; border-radius: 5px;
         }
 
-        /* --- Game Screen Styles --- */
-        #score-display {
-            position: absolute;
-            top: 10%;
-            font-size: 3.5rem;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.9);
-            text-shadow: 0 5px 15px rgba(0,0,0,1);
-            z-index: 10;
-            pointer-events: none;
+        /* Preferences & Colors */
+        .pref-title { font-size: 3.5vmin; margin-top: 1vmin; color: #ffffff; }
+        .pref-sub { font-size: 1.8vmin; color: #888; margin-bottom: 2vmin; text-align: center; width: 80%; line-height: 1.2;}
+        
+        .color-columns { display: flex; width: 85%; justify-content: space-between; margin-bottom: 2vmin;}
+        .color-col { width: 48%; display: flex; flex-direction: column; align-items: center; }
+        .col-title { font-size: 2.2vmin; margin-bottom: 1vmin; color: #aaa;}
+        
+        .swatch-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1vmin; margin-bottom: 1vmin; width: 100%;}
+        .swatch { 
+            width: 4vmin; height: 4vmin; border-radius: 50%; border: 1px solid #777; 
+            cursor: pointer; transition: transform 0.1s;
+        }
+        .swatch:active { transform: scale(0.7); }
+        
+        .hex-input {
+            width: 90%; padding: 1vmin; background: #000; border: 1px solid #555; 
+            color: white; text-align: center; font-size: 2vmin; border-radius: 5px;
         }
 
-        /* --- THE MASSIVE, REALISTIC, STATIC BUTTON --- */
-        #giant-btn {
-            width: 80vw;
-            height: 75vh;
-            border-radius: 50%;
-            border: none;
-            outline: none;
-            cursor: pointer;
-            position: relative;
-            
-            background: radial-gradient(circle at 50% 30%, #ff1a1a 0%, #b30000 50%, #330000 100%);
-            
-            box-shadow: 
-                0 0 0 12px #0a0a0a,          
-                0 0 0 22px #000000,          
-                inset 0 -40px 60px rgba(0, 0, 0, 0.9), 
-                inset 0 15px 30px rgba(255, 255, 255, 0.3); 
+        /* Close Button */
+        #close-btn {
+            background: #222; border: 2px solid #555; border-radius: 8px; color: #fff;
+            padding: 1vmin 4vmin; cursor: pointer; display: flex; flex-direction: column; align-items: center;
         }
+        #close-btn:active { background: #444; }
+        .close-x { font-weight: bold; font-size: 3.5vmin; line-height: 1; }
+        .close-text { font-size: 2vmin; margin-top: 0.5vmin; }
 
-        #giant-btn::after {
-            content: '';
-            position: absolute;
-            top: 6%;
-            left: 25%;
-            width: 50%;
-            height: 25%;
-            border-radius: 50%;
-            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 100%);
-            pointer-events: none;
-            filter: blur(1px); 
+        /* --- TOAST NOTIFICATION (ERROR MSG) --- */
+        #toast {
+            position: absolute; top: 5%; left: 50%; transform: translateX(-50%);
+            background: #ff1a1a; color: white; padding: 2vmin 4vmin; border-radius: 8px;
+            font-size: 2.5vmin; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 200; text-align: center; width: 85%;
         }
-           
     </style>
 </head>
 <body>
 
-    <div id="app-container">
+    <!-- Error Messages Dropdown -->
+    <div id="toast"></div>
 
-        <!-- SCREEN 1: Main Menu -->
-        <div id="menu-screen" class="screen active-screen">
-            <h1>QUICKCLICK</h1>
-            <button class="menu-btn" onclick="startGame()">Start</button>
-            <button class="menu-btn" onclick="loadGame()">Load Game</button>
-            <button class="menu-btn" onclick="openSettings()">Settings</button>
+    <!-- MAIN MENU -->
+    <div id="main-menu" class="screen active-screen">
+        <button id="mute-btn" class="top-bar-btn" onclick="toggleMute()">🔊</button>
+        <h1>QUICKCLICK</h1>
+        <button class="menu-btn" onclick="startGame(true)">New Game</button>
+        <button class="menu-btn" onclick="startGame(false)">Load Game</button>
+        <button class="menu-btn" onclick="openSettings()">Settings</button>
+    </div>
+
+    <!-- GAMEPLAY SCREEN -->
+    <div id="game-screen" class="screen">
+        <button id="back-btn" class="top-bar-btn" onclick="goToMenu()">← Menu</button>
+        <div id="game-container">
+            <!-- Blank, perfectly round button -->
+            <button id="click-button"></button>
         </div>
+    </div>
 
-        <!-- SCREEN 2: The Game -->
-        <div id="game-screen" class="screen">
-            <button class="back-btn" onclick="goToMenu()">← Menu</button>
-            <div id="score-display">0</div>
-            <button id="giant-btn"></button>
+    <!-- SETTINGS MODAL (CIRCLE) -->
+    <div id="settings-overlay">
+        <div id="settings-circle">
+            <div class="settings-title">Settings</div>
+            
+            <!-- Sensitivity (Squish Bounce) -->
+            <div class="setting-row">
+                <div class="setting-label">Sensitivity</div>
+                <input type="range" id="sens-slider" min="0" max="200" value="100">
+                <input type="text" id="sens-input" class="num-input" value="100">
+            </div>
+
+            <!-- Volume -->
+            <div class="setting-row">
+                <div class="setting-label">Volume</div>
+                <input type="range" id="vol-slider" min="0" max="100" value="100">
+                <input type="text" id="vol-input" class="num-input" value="100">
+            </div>
+
+            <div class="pref-title">Preferences</div>
+            <div class="pref-sub">If you want specific colours then paste the hex code</div>
+
+            <div class="color-columns">
+                <!-- Button Color -->
+                <div class="color-col">
+                    <div class="col-title">Button Color</div>
+                    <div class="swatch-grid" id="btn-swatches"></div>
+                    <input type="text" id="hex-btn" class="hex-input" placeholder="#HEXCODE">
+                </div>
+                <!-- BG Color -->
+                <div class="color-col">
+                    <div class="col-title">BG Color</div>
+                    <div class="swatch-grid" id="bg-swatches"></div>
+                    <input type="text" id="hex-bg" class="hex-input" placeholder="#HEXCODE">
+                </div>
+            </div>
+
+            <!-- Close Button -->
+            <button id="close-btn" onclick="closeSettings()">
+                <span class="close-x">[ X ]</span>
+                <span class="close-text">Close</span>
+            </button>
         </div>
-
-        <!-- SCREEN 3: Settings -->
-        <div id="settings-screen" class="screen">
-            <button class="back-btn" onclick="goToMenu()">← Menu</button>
-            <h2 style="font-size: 3rem; margin-bottom: 30px;">Settings</h2>
-            <p style="color: #888; font-size: 1.5rem;">(Themes and Preferences go here)</p>
-        </div>
-
     </div>
 
     <script>
-        /* --- JAVASCRIPT: Logic, Autosave, and Fullscreen Engine --- */
-        
-        let clicks = 0;
-        const SAVE_KEY = "QUICKCLICK_SaveData"; 
+        // --- GAME STATE ---
+        const SAVE_KEY = "QUICKCLICK_SaveData";
+        let state = {
+            clicks: 0,
+            sens: 100,
+            vol: 100,
+            btnHex: "#ff0000",
+            bgHex: "#000000",
+            muted: false
+        };
 
-        const menuScreen = document.getElementById('menu-screen');
-        const gameScreen = document.getElementById('game-screen');
-        const settingsScreen = document.getElementById('settings-screen');
-        const scoreDisplay = document.getElementById('score-display');
-        const giantBtn = document.getElementById('giant-btn');
+        // 7 Rainbow Colors + Black, White, Grey
+        const presetColors = [
+            "#FF0000", "#FFA500", "#FFFF00", "#008000", "#0000FF", "#4B0082", "#EE82EE", 
+            "#000000", "#FFFFFF", "#808080"
+        ];
 
-        // --- FULLSCREEN & LANDSCAPE LOCK ---
-        async function forceImmersiveMode() {
-            try {
-                // 1. Force Fullscreen (Hides status bar and nav bar)
-                if (document.documentElement.requestFullscreen) {
-                    await document.documentElement.requestFullscreen();
-                } else if (document.documentElement.webkitRequestFullscreen) { // Safari/Old Webkit
-                    await document.documentElement.webkitRequestFullscreen();
-                }
+        // --- DOM ELEMENTS ---
+        const screens = {
+            menu: document.getElementById('main-menu'),
+            game: document.getElementById('game-screen')
+        };
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const toastEl = document.getElementById('toast');
+        const giantBtn = document.getElementById('click-button');
+        const muteBtn = document.getElementById('mute-btn');
 
-                // 2. Force Landscape Mode
-                if (screen.orientation && screen.orientation.lock) {
-                    await screen.orientation.lock("landscape");
-                }
-            } catch (err) {
-                console.log("Immersive mode blocked by browser. User must rotate manually.");
+        const sensSlider = document.getElementById('sens-slider');
+        const sensInput = document.getElementById('sens-input');
+        const volSlider = document.getElementById('vol-slider');
+        const volInput = document.getElementById('vol-input');
+        const hexBtn = document.getElementById('hex-btn');
+        const hexBg = document.getElementById('hex-bg');
+
+        // --- AUDIO ENGINE (Synthesized Pop) ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playClickSound() {
+            if (state.muted || state.vol == 0 || !audioCtx) return;
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+            
+            const actualVolume = state.vol / 100;
+            gain.gain.setValueAtTime(actualVolume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // --- INIT & SAVE SYSTEM ---
+        function loadSave() {
+            const saved = localStorage.getItem(SAVE_KEY);
+            if (saved) state = { ...state, ...JSON.parse(saved) };
+            applyState();
+        }
+
+        function saveGame() {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+        }
+
+        function applyState() {
+            document.body.style.backgroundColor = state.bgHex;
+            giantBtn.style.background = state.btnHex;
+            
+            sensSlider.value = state.sens; sensInput.value = state.sens;
+            volSlider.value = state.vol; volInput.value = state.vol;
+            hexBtn.value = state.btnHex; hexBg.value = state.bgHex;
+            
+            muteBtn.textContent = state.muted ? "🔇" : "🔊";
+        }
+
+        // --- ERROR TOAST LOGIC ---
+        let toastTimeout;
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.style.opacity = 1;
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => { toastEl.style.opacity = 0; }, 3500);
+        }
+
+        // --- SETTINGS LOGIC ---
+        function updateSens(val) {
+            let num = parseInt(val);
+            if (isNaN(num)) num = 100;
+            if (num > 200) { num = 200; showToast("Whoa there speedster, 200 is the limit. Don't be oversmart."); }
+            if (num < 0) { num = 0; showToast("Negative sensitivity? What, do you want the button to click you? Set to 0."); }
+            state.sens = num; sensSlider.value = num; sensInput.value = num; saveGame();
+        }
+
+        function updateVol(val) {
+            let num = parseInt(val);
+            if (isNaN(num)) num = 100;
+            if (num > 100) { num = 100; showToast("Trying to blow out your speakers? Set to 100."); }
+            if (num < 0) { num = 0; showToast("Negative volume? Set to 0."); }
+            state.vol = num; volSlider.value = num; volInput.value = num; saveGame();
+        }
+
+        function isValidHex(hex) {
+            return /^#([0-9A-F]{3}){1,2}$/i.test(hex);
+        }
+
+        function updateColor(target, hexCode) {
+            if (!isValidHex(hexCode)) {
+                showToast("Nice try, but that's not a real color. Give me a valid Hex code!");
+                applyState(); // visual reset
+                return;
+            }
+            if (target === 'btn') { state.btnHex = hexCode; giantBtn.style.background = hexCode; }
+            if (target === 'bg') { state.bgHex = hexCode; document.body.style.backgroundColor = hexCode; }
+            saveGame();
+        }
+
+        // Inputs Event Listeners
+        sensSlider.addEventListener('input', (e) => updateSens(e.target.value));
+        sensInput.addEventListener('change', (e) => updateSens(e.target.value));
+        volSlider.addEventListener('input', (e) => updateVol(e.target.value));
+        volInput.addEventListener('change', (e) => updateVol(e.target.value));
+        hexBtn.addEventListener('change', (e) => updateColor('btn', e.target.value));
+        hexBg.addEventListener('change', (e) => updateColor('bg', e.target.value));
+
+        // Generate Color Swatches
+        function createSwatches(containerId, targetType) {
+            const container = document.getElementById(containerId);
+            presetColors.forEach(color => {
+                const div = document.createElement('div');
+                div.className = 'swatch';
+                div.style.backgroundColor = color;
+                div.onclick = () => {
+                    document.getElementById(targetType === 'btn' ? 'hex-btn' : 'hex-bg').value = color;
+                    updateColor(targetType, color);
+                };
+                container.appendChild(div);
+            });
+        }
+        createSwatches('btn-swatches', 'btn');
+        createSwatches('bg-swatches', 'bg');
+
+        // --- NAVIGATION & FULLSCREEN ---
+        function forceLandscape() {
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) docEl.requestFullscreen();
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(()=>{});
             }
         }
 
-        // Screen Navigation
-        function switchScreen(screenToShow) {
-            menuScreen.classList.remove('active-screen');
-            gameScreen.classList.remove('active-screen');
-            settingsScreen.classList.remove('active-screen');
-            screenToShow.classList.add('active-screen');
+        function startGame(isNew) {
+            initAudio();
+            forceLandscape();
+            if (isNew) { state.clicks = 0; saveGame(); }
+            applyState();
+            screens.menu.classList.remove('active-screen');
+            screens.game.classList.add('active-screen');
         }
 
         function goToMenu() {
-            autoSave(); 
-            switchScreen(menuScreen);
+            screens.game.classList.remove('active-screen');
+            screens.menu.classList.add('active-screen');
         }
 
-        function openSettings() {
-            switchScreen(settingsScreen);
-        }
-
-        // Gameplay triggers
-        function startGame() {
-            forceImmersiveMode(); // Forces screen turn and full screen!
-            clicks = 0; 
-            updateUI();
-            switchScreen(gameScreen);
-        }
-
-        function registerClick() {
-            clicks++;
-            updateUI();
-        }
-
-        function updateUI() {
-            scoreDisplay.innerText = clicks;
-        }
-
-        // Touch event to make it insanely fast on mobile
-        giantBtn.addEventListener('touchstart', function(e) {
-            e.preventDefault(); 
-            registerClick();
-        });
+        function openSettings() { settingsOverlay.classList.add('active-modal'); }
+        function closeSettings() { settingsOverlay.classList.remove('active-modal'); }
         
-        giantBtn.addEventListener('mousedown', function(e) {
-            if (e.pointerType === 'mouse') {
-                registerClick();
-            }
-        });
-
-        // Save & Load System
-        function autoSave() {
-            const saveData = { savedClicks: clicks };
-            localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+        function toggleMute() {
+            state.muted = !state.muted;
+            saveGame(); applyState();
         }
 
-        function loadGame() {
-            forceImmersiveMode(); // Forces screen turn and full screen!
-            const savedDataString = localStorage.getItem(SAVE_KEY);
-            if (savedDataString) {
-                const parsedData = JSON.parse(savedDataString);
-                clicks = parsedData.savedClicks || 0;
-            } else {
-                clicks = 0;
-            }
-            updateUI();
-            switchScreen(gameScreen);
+        // --- GAMEPLAY MECHANICS (Bounce + Sound) ---
+        function handleTap(e) {
+            if(e && e.preventDefault) e.preventDefault();
+            initAudio();
+            state.clicks++;
+            playClickSound();
+            
+            // Sensitivity Logic: 0 = scale(1) [no move], 100 = scale(0.95), 200 = scale(0.90)
+            let scaleValue = 1 - (state.sens / 2000); 
+            giantBtn.style.transform = `scale(${scaleValue})`;
+            
+            setTimeout(() => { giantBtn.style.transform = `scale(1)`; }, 50);
+            saveGame();
         }
 
-        // Auto-save triggers
-        window.addEventListener("beforeunload", autoSave);
-        document.addEventListener("visibilitychange", () => {
-            if (document.hidden) {
-                autoSave();
-            }
-        });
+        giantBtn.addEventListener('touchstart', handleTap);
+        giantBtn.addEventListener('mousedown', (e) => { if (e.pointerType === 'mouse' || e.type === 'mousedown') handleTap(e); });
+
+        // Run on load
+        loadSave();
     </script>
 </body>
 </html>
+
+
+```
