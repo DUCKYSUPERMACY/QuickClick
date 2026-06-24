@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,7 +9,8 @@
         * {
             box-sizing: border-box; margin: 0; padding: 0;
             user-select: none; -webkit-user-select: none; touch-action: none;
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            outline: none;
         }
 
         body, html {
@@ -30,11 +30,426 @@
 
         /* --- MAIN MENU --- */
         #main-menu h1 {
-            font-size: 8vmin; color: #ffffff; letter-spacing: 2px;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5); margin-bottom: 5vmin;
+            font-size: 8vmin; color: #ffffff; letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4); margin-bottom: 5vmin;
         }
         .menu-btn {
             background-color: #111; color: white; border: 2px solid #333;
+            padding: 2vmin 6vmin; margin: 1.5vmin; font-size: 3.5vmin; font-weight: bold;
+            border-radius: 12px; width: 50vmin; cursor: pointer; transition: 0.1s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .menu-btn:active { background-color: #222; border-color: #aaa; transform: scale(0.95); }
+        
+        /* --- GAMEPLAY UI --- */
+        .top-bar-btn {
+            position: absolute; top: 3vmin; font-size: 4.5vmin;
+            background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; z-index: 10;
+            transition: color 0.2s, transform 0.1s; text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+        }
+        .top-bar-btn:active { transform: scale(0.8); color: white; }
+        
+        #back-btn { left: 4vmin; }
+        #ingame-settings-btn { right: 4vmin; }
+
+        #game-container { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; }
+
+        /* --- THE PLUNGER BUTTON PHYSICS --- */
+        /* The Shiny Static Rim */
+        #btn-rim {
+            width: 65vmin; height: 65vmin; aspect-ratio: 1/1; border-radius: 50%;
+            background: radial-gradient(circle at 50% 5%, #666 0%, #222 40%, #050505 80%, #000 100%);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.9), inset 0 4px 8px rgba(255,255,255,0.5), inset 0 -4px 10px rgba(0,0,0,0.8);
+            border: 2px solid #111;
+            display: flex; justify-content: center; align-items: center; position: relative;
+        }
+        
+        /* The Plunging Inner Button */
+        #btn-center {
+            width: 52vmin; height: 52vmin; border-radius: 50%;
+            background: #ff0000; /* Replaced by JS */
+            box-shadow: inset 0 15px 30px rgba(255,255,255,0.5), inset 0 -15px 30px rgba(0,0,0,0.6), 0 5px 15px rgba(0,0,0,0.8);
+            transition: transform 0.05s ease-out, box-shadow 0.05s ease-out;
+            cursor: pointer;
+        }
+        
+        /* The Pressed State */
+        .is-pressed {
+            transform: scale(0.96) translateY(2vmin) !important;
+            box-shadow: inset 0 5px 15px rgba(255,255,255,0.3), inset 0 -5px 15px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.9) !important;
+        }
+
+        /* Entry Animation Pop */
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            60% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .animate-pop { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        /* --- OVERLAYS & MODALS --- */
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 100;
+        }
+        .active-overlay { opacity: 1 !important; pointer-events: auto !important; }
+
+        /* The Settings Circle */
+        #settings-circle {
+            width: 95vmin; height: 95vmin; border-radius: 50%;
+            background: rgba(20, 20, 20, 0.95); border: 2px solid #444;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 3vmin; position: relative;
+        }
+
+        /* General Modal Rectangles (Load & Quit) */
+        .modal-rect {
+            width: 85%; max-width: 600px; max-height: 85%; background: rgba(25, 25, 25, 0.95);
+            border: 2px solid #444; border-radius: 20px; padding: 4vmin;
+            display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+        }
+
+        /* --- TYPOGRAPHY & INPUTS --- */
+        .modal-title { font-size: 4.5vmin; font-weight: bold; color: #ffffff; margin-bottom: 2vmin; text-align: center;}
+        .modal-sub { font-size: 2.2vmin; color: #aaa; margin-bottom: 3vmin; text-align: center; }
+        
+        .setting-row { display: flex; align-items: center; width: 85%; justify-content: space-between; margin-bottom: 2vmin;}
+        .setting-label { font-size: 2.5vmin; width: 25%; color: #ccc;}
+        input[type="range"] { width: 50%; accent-color: #ffffff; }
+        
+        input[type="text"] {
+            padding: 1.5vmin; background: #0b0b0b; border: 1px solid #555; 
+            color: white; text-align: center; font-size: 2.5vmin; border-radius: 8px; width: 100%;
+        }
+        input[type="text"]:focus { border-color: #fff; }
+
+        /* Colors Array */
+        .color-columns { display: flex; width: 85%; justify-content: space-between; margin-bottom: 2vmin;}
+        .color-col { width: 48%; display: flex; flex-direction: column; align-items: center; }
+        .col-title { font-size: 2vmin; margin-bottom: 1vmin; color: #aaa;}
+        .swatch-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1vmin; margin-bottom: 1vmin; width: 100%;}
+        .swatch { width: 4vmin; height: 4vmin; border-radius: 50%; border: 1px solid #777; cursor: pointer; transition: 0.1s; }
+        .swatch:active { transform: scale(0.7); }
+
+        /* Save Slots List */
+        .saves-list {
+            width: 100%; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5vmin;
+            margin-bottom: 3vmin; padding-right: 1vmin;
+        }
+        .save-slot {
+            background: #111; border: 1px solid #444; border-radius: 10px; padding: 3vmin;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+            transition: 0.1s;
+        }
+        .save-slot:active { background: #222; transform: scale(0.98); }
+        .save-name { font-size: 3vmin; font-weight: bold; color: #fff; }
+        .save-clicks { font-size: 2.5vmin; color: #888; }
+
+        /* Buttons */
+        .action-btn {
+            background: #222; border: 2px solid #555; border-radius: 8px; color: #fff;
+            padding: 1.5vmin 5vmin; font-size: 2.5vmin; cursor: pointer; font-weight: bold;
+            transition: 0.1s;
+        }
+        .action-btn:active { background: #444; transform: scale(0.95); }
+        
+        .close-btn-circle { display: flex; flex-direction: column; align-items: center; margin-top: 2vmin; }
+        .close-x { font-weight: bold; font-size: 3.5vmin; line-height: 1; }
+
+        /* --- TOAST NOTIFICATION (ERROR MSG) --- */
+        #toast {
+            position: absolute; top: 5%; left: 50%; transform: translateX(-50%);
+            background: #cc0000; color: white; padding: 2vmin 4vmin; border-radius: 8px;
+            font-size: 2.5vmin; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 200; text-align: center; width: 85%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Snarky Toast Notification -->
+    <div id="toast"></div>
+
+    <!-- MAIN MENU -->
+    <div id="main-menu" class="screen active-screen">
+        <h1>QUICKCLICK</h1>
+        <button class="menu-btn" onclick="startNewGame()">New Game</button>
+        <button class="menu-btn" onclick="openLoadMenu()">Load Game</button>
+        <button class="menu-btn" onclick="openSettings()">Global Settings</button>
+    </div>
+
+    <!-- GAMEPLAY SCREEN -->
+    <div id="game-screen" class="screen">
+        <button id="back-btn" class="top-bar-btn" onclick="openQuitMenu()">←</button>
+        <button id="ingame-settings-btn" class="top-bar-btn" onclick="openSettings()">⚙️</button>
+        
+        <div id="game-container">
+            <!-- The Plunger Button -->
+            <div id="btn-rim">
+                <div id="btn-center"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS OVERLAY (CIRCLE) -->
+    <div id="settings-overlay" class="overlay">
+        <div id="settings-circle">
+            <div class="modal-title" style="margin-bottom:0;">Settings</div>
+            <div class="modal-sub" style="margin-bottom:2vmin;">These apply to all your saves</div>
+            
+            <div class="setting-row">
+                <div class="setting-label">Volume</div>
+                <input type="range" id="vol-slider" min="0" max="100" value="100">
+                <input type="text" id="vol-input" style="width:15%; padding: 1vmin;" value="100">
+            </div>
+
+            <div class="color-columns">
+                <div class="color-col">
+                    <div class="col-title">Button Color</div>
+                    <div class="swatch-grid" id="btn-swatches"></div>
+                    <input type="text" id="hex-btn" placeholder="#HEXCODE">
+                </div>
+                <div class="color-col">
+                    <div class="col-title">BG Color</div>
+                    <div class="swatch-grid" id="bg-swatches"></div>
+                    <input type="text" id="hex-bg" placeholder="#HEXCODE">
+                </div>
+            </div>
+
+            <button class="action-btn close-btn-circle" onclick="closeOverlay('settings-overlay')">
+                <span class="close-x">[ X ]</span>
+                <span style="font-size: 1.8vmin; margin-top: 0.5vmin;">Close</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- LOAD OVERLAY (RECTANGLE) -->
+    <div id="load-overlay" class="overlay">
+        <div class="modal-rect">
+            <div class="modal-title">Load Game</div>
+            <div class="modal-sub">Pick up right where you left off.</div>
+            
+            <div class="saves-list" id="saves-container">
+                <!-- Dynamically populated -->
+            </div>
+
+            <button class="action-btn" onclick="closeOverlay('load-overlay')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- QUIT/SAVE OVERLAY (RECTANGLE) -->
+    <div id="quit-overlay" class="overlay">
+        <div class="modal-rect">
+            <div class="modal-title">Quitting?</div>
+            <div class="modal-sub" id="snarky-roast">Leaving so soon?</div>
+            
+            <div style="width: 100%; margin-bottom: 3vmin;">
+                <div class="col-title" style="text-align: left; color: white;">Save File Name:</div>
+                <input type="text" id="save-name-input" onfocus="this.select()" placeholder="Game Name">
+            </div>
+
+            <div style="display: flex; gap: 2vmin; width: 100%;">
+                <button class="action-btn" style="flex: 1; background: #555;" onclick="closeOverlay('quit-overlay')">Resume</button>
+                <button class="action-btn" style="flex: 1; background: #cc0000; border-color: #ff3333;" onclick="confirmQuit()">Save & Exit</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STRUCTURES ---
+        const GLOBAL_KEY = "QC_Global_Settings";
+        const SAVES_KEY = "QC_Save_Files";
+        
+        let globalConfig = { vol: 100, btnHex: "#cc0000", bgHex: "#000000" };
+        let saveFiles = []; // Array of { id, name, clicks, timestamp }
+        
+        let currentSession = { id: null, name: "", clicks: 0 };
+
+        const presetColors = ["#FF0000", "#FFA500", "#FFFF00", "#008000", "#0000FF", "#4B0082", "#EE82EE", "#000000", "#FFFFFF", "#808080"];
+        
+        const roasts = [
+            "Fingers getting tired already?", 
+            "My grandma taps faster than you.", 
+            "Going to touch grass?", 
+            "Quitting? Weak.", 
+            "Taking a break to ice those thumbs?",
+            "Save and run away, coward.",
+            "Couldn't handle the pressure?",
+            "Wow, giving up already?"
+        ];
+
+        // --- DOM ELEMENTS ---
+        const screens = { menu: document.getElementById('main-menu'), game: document.getElementById('game-screen') };
+        const toastEl = document.getElementById('toast');
+        const btnRim = document.getElementById('btn-rim');
+        const btnCenter = document.getElementById('btn-center');
+        
+        const volSlider = document.getElementById('vol-slider');
+        const volInput = document.getElementById('vol-input');
+        const hexBtn = document.getElementById('hex-btn');
+        const hexBg = document.getElementById('hex-bg');
+        
+        const savesContainer = document.getElementById('saves-container');
+        const roastText = document.getElementById('snarky-roast');
+        const saveNameInput = document.getElementById('save-name-input');
+
+        // --- AUDIO ENGINE ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playClickSound() {
+            if (globalConfig.vol == 0 || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+            
+            const actualVolume = globalConfig.vol / 100;
+            gain.gain.setValueAtTime(actualVolume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // --- CORE SAVE/LOAD LOGIC ---
+        function loadMemory() {
+            const savedGlobals = localStorage.getItem(GLOBAL_KEY);
+            if (savedGlobals) globalConfig = { ...globalConfig, ...JSON.parse(savedGlobals) };
+            
+            const savedFiles = localStorage.getItem(SAVES_KEY);
+            if (savedFiles) saveFiles = JSON.parse(savedFiles);
+            
+            applyGlobalSettings();
+        }
+
+        function saveMemory() {
+            localStorage.setItem(GLOBAL_KEY, JSON.stringify(globalConfig));
+            localStorage.setItem(SAVES_KEY, JSON.stringify(saveFiles));
+        }
+
+        function autoSaveCurrent() {
+            if (!currentSession.id) return;
+            let existing = saveFiles.find(s => s.id === currentSession.id);
+            if (existing) {
+                existing.clicks = currentSession.clicks;
+                existing.name = currentSession.name;
+                existing.timestamp = Date.now();
+            } else {
+                saveFiles.push({...currentSession, timestamp: Date.now()});
+            }
+            saveMemory();
+        }
+
+        function applyGlobalSettings() {
+            document.body.style.backgroundColor = globalConfig.bgHex;
+            btnCenter.style.background = globalConfig.btnHex;
+            
+            volSlider.value = globalConfig.vol; volInput.value = globalConfig.vol;
+            hexBtn.value = globalConfig.btnHex; hexBg.value = globalConfig.bgHex;
+        }
+
+        // --- OVERLAYS & NAVIGATION ---
+        function openOverlay(id) { document.getElementById(id).classList.add('active-overlay'); }
+        function closeOverlay(id) { document.getElementById(id).classList.remove('active-overlay'); }
+        function openSettings() { openOverlay('settings-overlay'); }
+
+        function forceLandscape() {
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) docEl.requestFullscreen();
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(()=>{});
+            }
+        }
+
+        // --- GAME ENTRY POINTS ---
+        function startNewGame() {
+            initAudio();
+            forceLandscape();
+            
+            // Generate new save slot
+            const newId = 'game_' + Date.now();
+            const newName = `Game ${saveFiles.length + 1}`;
+            currentSession = { id: newId, name: newName, clicks: 0 };
+            autoSaveCurrent();
+            
+            launchGameScreen();
+        }
+
+        function loadExistingGame(id) {
+            initAudio();
+            forceLandscape();
+            const save = saveFiles.find(s => s.id === id);
+            if(save) {
+                currentSession = { id: save.id, name: save.name, clicks: save.clicks };
+                closeOverlay('load-overlay');
+                launchGameScreen();
+            } else {
+                showToast("Whoops, couldn't find that file. Ghosts must have eaten it.");
+            }
+        }
+
+        function launchGameScreen() {
+            screens.menu.classList.remove('active-screen');
+            screens.game.classList.add('active-screen');
+            
+            // Pop Entry Animation
+            btnRim.classList.remove('animate-pop');
+            void btnRim.offsetWidth; // trigger reflow
+            btnRim.classList.add('animate-pop');
+        }
+
+        // --- THE LOAD MENU ---
+        function openLoadMenu() {
+            savesContainer.innerHTML = '';
+            
+            if(saveFiles.length === 0) {
+                savesContainer.innerHTML = '<div style="text-align:center; color:#888; padding: 2vmin;">No saves yet. Go click something!</div>';
+            } else {
+                // Sort by newest first
+                const sortedSaves = [...saveFiles].sort((a,b) => b.timestamp - a.timestamp);
+                
+                sortedSaves.forEach(save => {
+                    const div = document.createElement('div');
+                    div.className = 'save-slot';
+                    div.innerHTML = `
+                        <span class="save-name">${save.name}</span>
+                        <span class="save-clicks">${save.clicks} Clicks</span>
+                    `;
+                    div.onclick = () => loadExistingGame(save.id);
+                    savesContainer.appendChild(div);
+                });
+            }
+            openOverlay('load-overlay');
+        }
+
+        // --- THE QUIT MENU ---
+        function openQuitMenu() {
+            roastText.textContent = roasts[Math.floor(Math.random() * roasts.length)];
+            saveNameInput.value = currentSession.name;
+            openOverlay('quit-overlay');
+        }
+
+        function confirmQuit() {
+            // Update name from input, fallback if empty
+            let inputName = saveNameInput.value.trim();
+            if(inputName === "") inputName = `Game ${saveFiles.length}`; // fallback
+            
+            currentSession.name = inputName;
+            autoSaveCurren            background-color: #111; color: white; border: 2px solid #333;
             padding: 2vmin 6vmin; margin: 1.5vmin; font-size: 3.5vmin;
             border-radius: 8px; width: 50vmin; cursor: pointer; transition: 0.1s;
         }
@@ -401,6 +816,3 @@
     </script>
 </body>
 </html>
-
-
-```
